@@ -12,7 +12,7 @@ public class SpeechToTextVoskStartEnd {
             Scanner scanner = new Scanner(System.in);
 
             // Загружаем модель
-            Model model = new Model("C:\\Users\\Andrs\\IdeaProjects\\untitled\\src\\main\\java\\org\\example\\vosk-model-small-ru-0.22");
+            Model model = new Model("C:\\Users\\Andrs\\IdeaProjects\\Vosk\\src\\main\\resources\\vosk-model-small-ru-0.22");
 
             // Настройка формата аудио и микрофона
             AudioFormat format = new AudioFormat(16000, 16, 1, true, false);
@@ -36,7 +36,7 @@ public class SpeechToTextVoskStartEnd {
                 String input = scanner.nextLine();
 
                 if ("1".equals(input)) {
-                    System.out.println("Запись... Говорите!");
+                    System.out.println("Запись...Говорите!");
 
                     while (true) {
                         if (System.in.available() > 0) {
@@ -55,6 +55,7 @@ public class SpeechToTextVoskStartEnd {
 
                     // Вывод финального результата
                     System.out.println("Распознанный текст: " + recognizer.getResult());
+
                 } else if ("0".equals(input)) {
                     System.out.println("Выход.");
                     break;

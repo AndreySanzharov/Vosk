@@ -11,7 +11,7 @@ public class SpeechToTextVoskTimeout {
         try {
 
             // Загружаем модель
-            Model model = new Model("C:\\Users\\Andrs\\IdeaProjects\\untitled\\src\\main\\java\\org\\example\\vosk-model-small-ru-0.22");
+            Model model = new Model("C:\\Users\\Andrs\\IdeaProjects\\Vosk\\src\\main\\resources\\vosk-model-small-ru-0.22");
 
             // Настройка формата аудио и микрофона
             AudioFormat format = new AudioFormat(16000, 16, 1, true, false);
