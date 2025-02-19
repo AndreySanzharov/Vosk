@@ -11,19 +11,20 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.Scanner;
 
-public class Test {
+public class VoskSpeechRecognizer {
 
     private static Model model;
     private static Recognizer recognizer;
     private static TargetDataLine microphone;
     private static final String RESULT_FILE_PATH = "C:\\Users\\Andrs\\IdeaProjects\\Vosk\\src\\main\\resources\\output.txt";
+    private static final String MODEL_PATH = "C:\\Users\\Andrs\\IdeaProjects\\Vosk\\src\\main\\resources\\vosk-model-small-ru-0.22";
 
     public static void main(String[] args) {
         try {
             Scanner scanner = new Scanner(System.in);
 
             // Загружаем модель
-            model = new Model("C:\\Users\\Andrs\\IdeaProjects\\Vosk\\src\\main\\resources\\vosk-model-small-ru-0.22");
+            model = new Model(MODEL_PATH);
             recognizer = new Recognizer(model, 16000);
 
             while (true) {
