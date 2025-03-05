@@ -1,0 +1,49 @@
+import javazoom.jl.decoder.*;
+import javax.sound.sampled.*;
+import java.io.*;
+
+public class Mp3ToWavJLayer {
+    public static void main(String[] args) throws IOException {
+        File mp3File = new File("input.mp3");
+        File wavFile = new File("output.wav");
+        convertMp3ToWav(mp3File, wavFile);
+        System.out.println("Конвертация завершена: " + wavFile.getAbsolutePath());
+    }
+
+    public static void convertMp3ToWav(File mp3, File wav) throws IOException {
+        try (FileInputStream fis = new FileInputStream(mp3);
+             BufferedInputStream bis = new BufferedInputStream(fis);
+             FileOutputStream fos = new FileOutputStream(wav)) {
+
+            Bitstream bitstream = new Bitstream(bis);
+            Decoder decoder = new Decoder();
+            AudioFormat format = new AudioFormat(44100, 16, 2, true, false);
+
+            try (AudioInputStream audioStream = new AudioInputStream(new ByteArrayInputStream(decodeMp3(bitstream, decoder)), format, -1)) {
+                AudioSystem.write(audioStream, AudioFileFormat.Type.WAVE, fos);
+            }
+        } catch (JavaLayerException e) {
+            throw new IOException("Ошибка декодирования MP3", e);
+        }
+    }
+
+    private static byte[] decodeMp3(Bitstream bitstream, Decoder decoder) throws JavaLayerException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        SampleBuffer buffer;
+        Header header;
+
+        while ((header = bitstream.readFrame()) != null) {
+            buffer = (SampleBuffer) decoder.decodeFrame(header, bitstream);
+            short[] samples = buffer.getBuffer();
+
+            for (short sample : samples) {
+                output.write(sample & 0xFF);
+                output.write((sample >> 8) & 0xFF);
+            }
+
+            bitstream.closeFrame();
+        }
+
+        return output.toByteArray();
+    }
+}
