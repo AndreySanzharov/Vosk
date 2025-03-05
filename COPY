@@ -19,31 +19,31 @@ public class Mp3ToWavJLayer {
             Decoder decoder = new Decoder();
             AudioFormat format = new AudioFormat(44100, 16, 2, true, false);
 
-            try (AudioInputStream audioStream = new AudioInputStream(new ByteArrayInputStream(decodeMp3(bitstream, decoder)), format, -1)) {
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            try {
+                Header header;
+                while ((header = bitstream.readFrame()) != null) {
+                    SampleBuffer buffer = (SampleBuffer) decoder.decodeFrame(header, bitstream);
+                    short[] samples = buffer.getBuffer();
+
+                    for (short sample : samples) {
+                        byteArrayOutputStream.write(sample & 0xFF);
+                        byteArrayOutputStream.write((sample >> 8) & 0xFF);
+                    }
+                    bitstream.closeFrame();
+                }
+
+                byte[] pcmData = byteArrayOutputStream.toByteArray();
+
+                // Создаем AudioInputStream с точной длиной данных
+                ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(pcmData);
+                AudioInputStream audioStream = new AudioInputStream(byteArrayInputStream, format, pcmData.length / format.getFrameSize());
+
+                // Записываем WAV
                 AudioSystem.write(audioStream, AudioFileFormat.Type.WAVE, fos);
+            } catch (JavaLayerException e) {
+                throw new IOException("Ошибка декодирования MP3", e);
             }
-        } catch (JavaLayerException e) {
-            throw new IOException("Ошибка декодирования MP3", e);
         }
-    }
-
-    private static byte[] decodeMp3(Bitstream bitstream, Decoder decoder) throws JavaLayerException {
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        SampleBuffer buffer;
-        Header header;
-
-        while ((header = bitstream.readFrame()) != null) {
-            buffer = (SampleBuffer) decoder.decodeFrame(header, bitstream);
-            short[] samples = buffer.getBuffer();
-
-            for (short sample : samples) {
-                output.write(sample & 0xFF);
-                output.write((sample >> 8) & 0xFF);
-            }
-
-            bitstream.closeFrame();
-        }
-
-        return output.toByteArray();
     }
 }
