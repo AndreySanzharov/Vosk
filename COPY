@@ -1,48 +1,65 @@
-import javazoom.jl.decoder.*;
 import javax.sound.sampled.*;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 
-public class Mp3ToWavJLayer {
-    public static void main(String[] args) throws IOException {
-        File mp3File = new File("input.mp3");
-        File wavFile = new File("output.wav");
-        convertMp3ToWav(mp3File, wavFile);
-        System.out.println("Конвертация завершена: " + wavFile.getAbsolutePath());
+public class Mp3ToWavConverter {
+
+    public static void main(String[] args) {
+        String inputFilePath = "input.mp3"; // Укажите путь к вашему MP3 файлу
+        String outputFilePath = "output.wav"; // Укажите желаемый путь для WAV файла
+
+        try {
+            convertMp3ToWav(inputFilePath, outputFilePath);
+            System.out.println("Успешно преобразовано из MP3 в WAV!");
+        } catch (Exception e) {
+            System.err.println("Ошибка при преобразовании: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
-    public static void convertMp3ToWav(File mp3, File wav) throws IOException {
-        try (FileInputStream fis = new FileInputStream(mp3);
-             BufferedInputStream bis = new BufferedInputStream(fis);
-             FileOutputStream fos = new FileOutputStream(wav)) {
+    public static void convertMp3ToWav(String inputFilePath, String outputFilePath) throws Exception {
+        File mp3File = new File(inputFilePath);
+        File wavFile = new File(outputFilePath);
 
-            Bitstream bitstream = new Bitstream(bis);
-            Decoder decoder = new Decoder();
-            AudioFormat format = new AudioFormat(44100, 16, 2, true, false);
+        // Проверяем, что входной файл существует
+        if (!mp3File.exists()) {
+            throw new IOException("Входной файл MP3 не найден: " + inputFilePath);
+        }
 
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            try {
-                Header header;
-                while ((header = bitstream.readFrame()) != null) {
-                    SampleBuffer buffer = (SampleBuffer) decoder.decodeFrame(header, bitstream);
-                    short[] samples = buffer.getBuffer();
+        // Получаем AudioInputStream из MP3 файла
+        AudioInputStream mp3Stream = null;
+        try {
+            mp3Stream = AudioSystem.getAudioInputStream(mp3File);
+        } catch (UnsupportedAudioFileException e) {
+            throw new Exception("Неподдерживаемый формат аудио файла (возможно, требуется MP3SPI): " + e.getMessage());
+        }
 
-                    for (short sample : samples) {
-                        byteArrayOutputStream.write(sample & 0xFF);
-                        byteArrayOutputStream.write((sample >> 8) & 0xFF);
-                    }
-                    bitstream.closeFrame();
-                }
+        // Декодируем MP3 в PCM (WAV требует PCM)
+        AudioFormat baseFormat = mp3Stream.getFormat();
+        AudioFormat decodedFormat = new AudioFormat(
+                AudioFormat.Encoding.PCM_SIGNED,
+                baseFormat.getSampleRate(),
+                16, // Sample size in bits (WAV обычно использует 16)
+                baseFormat.getChannels(),
+                baseFormat.getChannels() * 2, // Frame size (bytes)
+                baseFormat.getSampleRate(), // Frame rate
+                false // Big-endian
+        );
 
-                byte[] pcmData = byteArrayOutputStream.toByteArray();
+        AudioInputStream decodedStream = AudioSystem.getAudioInputStream(decodedFormat, mp3Stream);
 
-                // Создаем AudioInputStream с точной длиной данных
-                ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(pcmData);
-                AudioInputStream audioStream = new AudioInputStream(byteArrayInputStream, format, pcmData.length / format.getFrameSize());
-
-                // Записываем WAV
-                AudioSystem.write(audioStream, AudioFileFormat.Type.WAVE, fos);
-            } catch (JavaLayerException e) {
-                throw new IOException("Ошибка декодирования MP3", e);
+        // Записываем в WAV файл
+        try {
+            AudioSystem.write(decodedStream, AudioFileFormat.Type.WAVE, wavFile);
+        } catch (IOException e) {
+            throw new IOException("Ошибка при записи в WAV файл: " + e.getMessage());
+        } finally {
+            // Закрываем потоки
+            if (mp3Stream != null) {
+                mp3Stream.close();
+            }
+            if (decodedStream != null) {
+                decodedStream.close();
             }
         }
     }
