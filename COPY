@@ -1,66 +1,50 @@
-import javax.sound.sampled.*;
+import org.bytedeco.ffmpeg.global.avcodec;
+import org.bytedeco.ffmpeg.global.avutil;
+import org.bytedeco.ffmpeg.global.swresample;
+import org.bytedeco.javacv.FFmpegFrameGrabber;
+import org.bytedeco.javacv.FFmpegFrameRecorder;
+import org.bytedeco.javacv.Frame;
+
 import java.io.File;
-import java.io.IOException;
 
 public class Mp3ToWavConverter {
 
     public static void main(String[] args) {
-        String inputFilePath = "input.mp3"; // Укажите путь к вашему MP3 файлу
-        String outputFilePath = "output.wav"; // Укажите желаемый путь для WAV файла
+        String inputMp3 = "path/to/input.mp3"; // Укажите путь к MP3-файлу
+        String outputWav = "path/to/output.wav"; // Укажите путь для сохранения WAV
 
         try {
-            convertMp3ToWav(inputFilePath, outputFilePath);
-            System.out.println("Успешно преобразовано из MP3 в WAV!");
+            convertMp3ToWav(inputMp3, outputWav);
+            System.out.println("Конвертация завершена: " + outputWav);
         } catch (Exception e) {
-            System.err.println("Ошибка при преобразовании: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    public static void convertMp3ToWav(String inputFilePath, String outputFilePath) throws Exception {
-        File mp3File = new File(inputFilePath);
-        File wavFile = new File(outputFilePath);
+    public static void convertMp3ToWav(String inputPath, String outputPath) throws Exception {
+        // Открываем MP3-файл
+        FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(inputPath);
+        grabber.start();
 
-        // Проверяем, что входной файл существует
-        if (!mp3File.exists()) {
-            throw new IOException("Входной файл MP3 не найден: " + inputFilePath);
+        // Настройки аудиоформата для WAV
+        FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(outputPath, grabber.getAudioChannels());
+        recorder.setSampleRate(grabber.getSampleRate());
+        recorder.setAudioCodec(avcodec.AV_CODEC_ID_PCM_S16LE); // WAV-формат
+        recorder.setFormat("wav");
+        recorder.setAudioBitrate(grabber.getAudioBitrate());
+        recorder.start();
+
+        // Читаем и записываем аудиокадры
+        Frame frame;
+        while ((frame = grabber.grabFrame()) != null) {
+            recorder.record(frame);
         }
 
-        // Получаем AudioInputStream из MP3 файла
-        AudioInputStream mp3Stream = null;
-        try {
-            mp3Stream = AudioSystem.getAudioInputStream(mp3File);
-        } catch (UnsupportedAudioFileException e) {
-            throw new Exception("Неподдерживаемый формат аудио файла (возможно, требуется MP3SPI): " + e.getMessage());
-        }
-
-        // Декодируем MP3 в PCM (WAV требует PCM)
-        AudioFormat baseFormat = mp3Stream.getFormat();
-        AudioFormat decodedFormat = new AudioFormat(
-                AudioFormat.Encoding.PCM_SIGNED,
-                baseFormat.getSampleRate(),
-                16, // Sample size in bits (WAV обычно использует 16)
-                baseFormat.getChannels(),
-                baseFormat.getChannels() * 2, // Frame size (bytes)
-                baseFormat.getSampleRate(), // Frame rate
-                false // Big-endian
-        );
-
-        AudioInputStream decodedStream = AudioSystem.getAudioInputStream(decodedFormat, mp3Stream);
-
-        // Записываем в WAV файл
-        try {
-            AudioSystem.write(decodedStream, AudioFileFormat.Type.WAVE, wavFile);
-        } catch (IOException e) {
-            throw new IOException("Ошибка при записи в WAV файл: " + e.getMessage());
-        } finally {
-            // Закрываем потоки
-            if (mp3Stream != null) {
-                mp3Stream.close();
-            }
-            if (decodedStream != null) {
-                decodedStream.close();
-            }
-        }
+        // Закрываем ресурсы
+        recorder.stop();
+        recorder.release();
+        grabber.stop();
+        grabber.release();
     }
 }
+
